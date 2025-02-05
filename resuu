@@ -2318,14 +2318,13 @@ end
             local Rage_Camera = Rage:Section({Name = Languages:GetTranslation("Extra"), Side = "Right"})
             local Rage_FOV, Visuals_Cursor = Visuals2:MultiSection({Sections = {Languages:GetTranslation("Field Of View"), Languages:GetTranslation("Cursor")}, Fill = true, Side = "Right"})
         ]]
-            local Rage_Main = Rage:Section({Name = Languages:GetTranslation("Main"), Fill = true})
-            local Rage_Extra = Rage:Section({Name = Languages:GetTranslation("Extra"), Side = "Right"})
+
+            local Rage_Main = Rage:Section({Name = Languages:GetTranslation("Main"), Side = "Left"})
+            local Rage_Extra = Rage:Section({Name = Languages:GetTranslation("Extra"), Fill = true, Side = "Left"})
 
 
 
 
-
--- Services and Variables
 local player = game:GetService("Players").LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local RunService = game:GetService("RunService")
@@ -2390,7 +2389,7 @@ player.CharacterAdded:Connect(function(newCharacter)
 end)
 
 -- Toggle auto-shoot
-Rage_Main:Toggle({
+Rage_Extra:Toggle({
     Name = "Automatic Fire",
     Default = false,
     Pointer = "AutoShoot_Toggle",
@@ -2410,7 +2409,13 @@ Rage_Main:Toggle({
 
 
 
-
+    Rage_Extra:Button({
+    Name = "Automatic Reload",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/Auto-Reload/refs/heads/main/AutoReload"))()
+    end})
 
 
 
@@ -2702,7 +2707,7 @@ end
 
 -- Toggle System (UI Toggle)
 -- Toggle for HitBox Expander
-Rage_Main:Toggle({
+Rage_Extra:Toggle({
     Name = "HitBox Expander",
     Default = false,  -- Default state (disabled)
     Pointer = "Hitbox_Toggle",  -- Unique identifier for this toggle
@@ -2765,7 +2770,7 @@ Rage_Main:Toggle({
 })
 
 
-Rage_Main:Slider({
+Rage_Extra:Slider({
     Name = "HitBox Expander Size (42 Is Recommended)",
     Minimum = 1,
     Maximum = 100,
@@ -3022,7 +3027,7 @@ function startMonitoring(autoResetEnabled)
 end
 
 -- Toggle button for Anti Stomp
-Rage_Main:Toggle({
+Rage_Extra:Toggle({
     Name = "Anti Stomp",
     Default = false,
     Pointer = "AntiStomp_Enabled",
@@ -3044,7 +3049,17 @@ Rage_Main:Toggle({
 
 
 
-Rage_Extra:Button({
+
+
+
+        end
+        --
+        do -- Players
+            local Players_Main = Players2:Section({Name = Languages:GetTranslation("Main"), Fill = true})
+            local Players_Extra = Players2:Section({Name = "Extra", Side = "Right", Fill = true})
+
+
+    Players_Extra:Button({
     Name = "Force Reset",
     Default = false,
     Pointer = "AimbotMain_Enabled",
@@ -3053,7 +3068,53 @@ Rage_Extra:Button({
     end})
 
 
-    Rage_Extra:Button({
+
+
+    Players_Extra:Button({
+    Name = "Anti Sit",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+    for i, v in pairs(Workspace:GetDescendants()) do
+    if v:IsA("Seat") then
+        v:Destroy()  -- Destroy the seat to prevent players from sitting
+    end
+end
+    end})
+
+
+
+    Players_Extra:Button({
+    Name = "Anti Void",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+        -- Adjust the FallenPartsDestroyHeight for parts to fall into the void at a much lower level
+Workspace.FallenPartsDestroyHeight = -5000000000000  -- You can change this to your desired height for parts
+
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        local Humanoid = character:WaitForChild("Humanoid")
+
+        -- Listen for when the player is falling
+        Humanoid.FreeFalling:Connect(function()
+            -- Check if the player's Y position is below the void threshold (e.g., -500)
+            if character.HumanoidRootPart.Position.Y < -500 then
+                -- Prevent the player from dying by maintaining their health
+                Humanoid.Health = Humanoid.Health  -- Keeps health from decreasing
+            end
+        end)
+    end)
+end)
+    end})
+
+
+
+
+
+
+
+    Players_Extra:Button({
     Name = "Chat Spy",
     Default = false,
     Pointer = "AimbotMain_Enabled",
@@ -3136,10 +3197,9 @@ initializeChatSpy()
     end})
 
 
-        end
-        --
-        do -- Players
-            local Players_Main = Players2:Section({Name = Languages:GetTranslation("Main"), Fill = true})
+
+
+
 
 
 
@@ -3225,6 +3285,19 @@ Players_Main:Toggle({
 })
 
 
+
+
+Players_Main:Slider({
+    Name = "Auto Armor Threshold",
+    Minimum = 1,
+    Maximum = 100,
+    Default = 30,
+    Decimals = 1,
+    Pointer = "OrbitDistance_Slider",
+    Callback = function(value)
+        PERCENT_TO_BUY_ARMOR = value
+    end
+})
 
 
 
@@ -3317,13 +3390,17 @@ Players_Main:Toggle({
     Callback = toggleAutoStomp, -- Simplified the callback
 })
 
+
+local blockDelay = 0.2
+local unblockDelay = 0.0
+
 -- Block Spamming Functions
 function spamBlock()
     while spamEnabled do
         ReplicatedStorage.MainEvent:FireServer("Block", true)
-        task.wait(0.2)
+        task.wait(blockDelay)
         ReplicatedStorage.MainEvent:FireServer("Block", false)
-        task.wait(0)
+        task.wait(unblockDelay)
     end
 end
 
@@ -3345,6 +3422,33 @@ Players_Main:Toggle({
     Pointer = "BlockSpam_Enabled",
     Callback = toggleSpam, -- Simplified the callback
 })
+
+
+
+Players_Main:Slider({
+    Name = "Delay To Block",
+    Minimum = 0.1,
+    Maximum = 10,
+    Default = 0.2,
+    Decimals = 0.1,
+    Pointer = "OrbitDistance_Slider",
+    Callback = function(value)
+        blockDelay = value
+    end
+})
+
+Players_Main:Slider({
+    Name = "Delay To UnBlock",
+    Minimum = 0.1,
+    Maximum = 10,
+    Default = 0.1,
+    Decimals = 0.1,
+    Pointer = "OrbitDistance_Slider",
+    Callback = function(value)
+        unblockDelay = value
+    end
+})
+
 
 
 
@@ -3431,11 +3535,26 @@ Players_Main:Toggle({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 local Services = {
     RunService = game:GetService("RunService")
 }
 
 local voidPosition = Vector3.new(0, -0, 10) -- Position of the void
+local teleportEnabled = false -- Flag to check if teleporting is enabled
+local healthThreshold = 50 -- Default health threshold
 
 -- Function to teleport the player to the void
 function teleportToVoid(humanoidRootPart)
@@ -3445,38 +3564,38 @@ function teleportToVoid(humanoidRootPart)
 end
 
 -- Monitor health and teleport if health is below the threshold
-function monitorHealth(Humanoid, teleportToVoidEnabled, healthThreshold)
+function monitorHealthStatus(Humanoid)
     Services.RunService.Heartbeat:Connect(function()
-        if teleportToVoidEnabled and Humanoid and Humanoid.Health < healthThreshold then
+        if teleportEnabled and Humanoid and Humanoid.Health < healthThreshold then
             teleportToVoid(Humanoid.Parent:WaitForChild("HumanoidRootPart"))
         end
     end)
 end
 
 -- Function to toggle the teleport feature
-function toggleTeleportToVoid(state)
-    teleportToVoidEnabled = state
-    print("Teleport to void", teleportToVoidEnabled and "enabled." or "disabled.")
+function toggleVoidTeleport(state)
+    teleportEnabled = state
+    print("Teleport to void", teleportEnabled and "enabled." or "disabled.")
 end
 
 -- Reset feature on character respawn
 game.Players.LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     local Humanoid = newCharacter:WaitForChild("Humanoid")
-    monitorHealth(Humanoid, teleportToVoidEnabled, healthThreshold)
+    monitorHealthStatus(Humanoid)
 end)
 
 -- Check on initial character
 if game.Players.LocalPlayer.Character then
     local Humanoid = game.Players.LocalPlayer.Character:WaitForChild("Humanoid")
-    monitorHealth(Humanoid, teleportToVoidEnabled, healthThreshold)
+    monitorHealthStatus(Humanoid)
 end
 
 -- Create a toggle button for the teleport feature
 Players_Main:Toggle({
     Name = "Teleport to Void on Low Health",
     Default = false,
-    Pointer = "TeleportToVoid_Toggle",
-    Callback = toggleTeleportToVoid
+    Pointer = "VoidTeleport_Toggle",
+    Callback = toggleVoidTeleport
 })
 
 -- Create a slider to set the health threshold
@@ -3497,6 +3616,7 @@ Players_Main:Slider({
 
 
 
+--[[
 local Services = {
     RunService = game:GetService("RunService"),
     Players = game:GetService("Players")
@@ -3569,7 +3689,7 @@ end)
 if Services.Players.LocalPlayer.Character then
     handleCharacterWalking(Services.Players.LocalPlayer.Character)
 end
-
+]]
 
 
 
@@ -3581,6 +3701,15 @@ end
         end
         --
         do -- Visuals
+        local Visuals_Main = Visuals2:Section({Name = Languages:GetTranslation("Main"), Fill = true, Side = "Left"})
+
+    Visuals_Main:Button({
+    Name = "esp",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/esp/refs/heads/main/esp"))()
+    end})
 end
         do -- Misc
             local Misc_Client, Misc_Custom = Misc:MultiSection({Sections = {Languages:GetTranslation("Main"), Languages:GetTranslation("Custom")}, Size = 347})
@@ -3713,20 +3842,68 @@ Misc_Movement:Slider({
 })
 
 
+-- Variables to control the teleportation loop
+local teleporting = false
+
+-- Function to start teleporting
+function startTeleporting()
+    teleporting = true
+    while teleporting do
+        -- Generate random large positions and rotations
+        local randomX = math.random(-9999999999999, 9999999999999)
+        local randomY = math.random(-9999999999999, 9999999999999)
+        local randomZ = math.random(-9999999999999, 9999999999999)
+
+        local randomAngleX = math.random(-9999999999999, 9999999999999)
+        local randomAngleY = math.random(-9999999999999, 9999999999999)
+        local randomAngleZ = math.random(-9999999999999, 9999999999999)
+
+        -- Set random CFrame for teleportation
+        Desync.Fake.CFrame = CFrame.new(randomX, randomY, randomZ)
+            * CFrame.Angles(randomAngleX, randomAngleY, randomAngleZ)
+
+        -- Small delay to prevent script from freezing
+        wait(0.1)
+    end
+end
+
+-- Function to stop teleporting
+function stopTeleporting()
+    teleporting = false
+end
+
+-- Add the toggle further down
+Misc_Custom:Toggle({
+    Name = "Random Teleport",
+    Default = false,
+    Pointer = "RandomTeleport_Toggle",
+    Callback = function(toggleState)
+        if toggleState then
+            print("Random Teleport Enabled")
+            startTeleporting()
+        else
+            print("Random Teleport Disabled")
+            stopTeleporting()
+        end
+    end
+})
+
+
+
 
             Misc_Client:Dropdown({Name = Languages:GetTranslation("Position Method"), Flag = "MiscClient_PositionMethod", Options = {"Off", "Head", "Under Floor", "In Air", "Floor Shift", "Air Shift", "Last Position", "Random", "Custom"}})
             Misc_Client:Dropdown({Name = Languages:GetTranslation("Turn Method"), Flag = "MiscClient_TurnMethod", Options = {"Off", "Rotate", "Backwards Shift", "Backwards", "Upside Down", "Laying", "Jitter", "Random", "Custom"}})
             Misc_Client:Dropdown({Name = Languages:GetTranslation("Turn Smoothing"), Flag = "MiscClient_TurnSmoothing", Options = {"Constant", "Reverse", "Inverse"}})
             Misc_Client:Dropdown({Name = Languages:GetTranslation("Easing Style"), Flag = "MiscClient_EasingStyle", Options = {"Off", "Linear", "Cubic", "Quad", "Quart", "Quint", "Sine", "Exponential", "Back", "Bounce", "Elastic", "Circular"}})
             Misc_Client:Dropdown({Name = Languages:GetTranslation("Easing Direction"), Flag = "MiscClient_EasingDirection", Options = {"In", "Out", "InOut"}})
-            Misc_Client:Dropdown({Name = Languages:GetTranslation("Velocity Method"), Flag = "MiscClient_VelocityMethod", Options = {"Off", "StandBug", "Multiplier", "Reversed", "Up", "Down", "Left", "Right"}})
-            Misc_Client:Slider({Name = Languages:GetTranslation("Velocity Multiplier"), Flag = "MiscClient_VelocityMultiplier", Default = 1, Maximum = 100, Minimum = 0, Decimals = 0.01})
+            Misc_Client:Dropdown({Name = Languages:GetTranslation("Velocity Method"), Flag = "MiscClient_VelocityMethod", Options = {"Off", "StandBug", "Destroy Stand", "Furthest It Can Go", "Multiplier", "Reversed", "Up", "Down", "Left", "Right"}})
+            Misc_Client:Slider({Name = Languages:GetTranslation("Velocity Multiplier"), Flag = "MiscClient_VelocityMultiplier", Default = 1, Maximum = 1000, Minimum = 0, Decimals = 0.01})
             --Misc_Client:Label({Name = Languages:GetTranslation("Turn on Visualisation in Players,\nLocal Player to see the Desync.", Center = true})
             --
             Misc_Movement:Toggle({Name = Languages:GetTranslation("Speed"), Flag = "MiscMovement_Speed"}):Keybind({Flag = "MiscMovement_SpeedKey", Default = Enum.KeyCode.V, KeybindName = Languages:GetTranslation("Speed Hack"), Mode = "Toggle"})
             Misc_Movement:Slider({Flag = "MiscMovement_SpeedNum", Ending = "s", Default = 25, Maximum = 200, Minimum = 1, Decimals = 1})
 
--- Locals
+
 local services = {
     Players = game:GetService("Players"),
     RunService = game:GetService("RunService"),
@@ -3864,6 +4041,7 @@ Misc_Movement:Slider({
         SetFlightSpeed(value)
     end
 })
+
 
 
 
@@ -4147,6 +4325,11 @@ end)
                         if VelocityMethod == "StandBug" then
                             Desync.Fake.Velocity = Vector3.new(9999999999999, -9999999999999, 9999999999999)
                             Desync.Fake.RotVelocity = Vector3.new(9999999999999, -9999999999999, 9999999999999)
+                        elseif VelocityMethod == "Destroy Stand" then
+                        Desync.Fake.CFrame = CFrame.new(9999999999999, -9999999999999, 9999999999999) * CFrame.Angles(9999999999999, -9999999999999, 9999999999999)
+                        elseif VelocityMethod == "Furthest It Can Go" then
+                           Desync.Fake.Velocity = Vector3.new(-999999999999999999999999999999, -999999999999999999999999999999, -999999999999999999999999999999)
+                           Desync.Fake.RotVelocity = Vector3.new(-999999999999999999999999999999, -999999999999999999999999999999, -999999999999999999999999999999)
                         elseif VelocityMethod == "Reversed" then
                             Desync.Fake.Velocity = -Desync.Real.Velocity
                             Desync.Fake.RotVelocity = -Desync.Real.RotVelocity
