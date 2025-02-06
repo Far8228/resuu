@@ -2409,12 +2409,67 @@ Rage_Extra:Toggle({
 
 
 
-    Rage_Extra:Button({
+reloadCooldown = 0 -- Time in seconds to prevent spamming reloads
+autoShootEnabled = false -- Toggle state
+lastReloadTime = 0 -- Track the last reload time globally
+
+function getPlayer()
+    return game:GetService("Players").LocalPlayer
+end
+
+function getReplicatedStorage()
+    return game:GetService("ReplicatedStorage")
+end
+
+function checkAmmoAndReload()
+    if not autoShootEnabled then return end -- Exit if toggle is disabled
+
+    local player = getPlayer()
+    local character = player and player.Character
+    if character then
+        local tool = character:FindFirstChildWhichIsA("Tool")
+        if tool then
+            local ammo = tool:FindFirstChild("Ammo")
+            if ammo and ammo.Value <= 0 then -- Check if ammo is 0 or less
+                local currentTime = tick()
+                if currentTime - lastReloadTime >= reloadCooldown then
+                    -- Reload the gun
+                    getReplicatedStorage().MainEvent:FireServer("Reload", tool)
+                    lastReloadTime = currentTime -- Update the last reload time globally
+                end
+            end
+        end
+    end
+end
+
+function onHeartbeat()
+    checkAmmoAndReload()
+end
+
+game:GetService("RunService").Heartbeat:Connect(onHeartbeat)
+
+Rage_Extra:Toggle({
     Name = "Automatic Reload",
+    Default = false,
+    Pointer = "AutoShoot_Toggle",
+    Callback = function(toggleState)
+        autoShootEnabled = toggleState
+        if toggleState then
+            print("Automatic Fire Enabled")
+        else
+            print("Automatic Fire Disabled")
+        end
+    end
+})
+
+
+
+    Rage_Extra:Button({
+    Name = "pastesense",
     Default = false,
     Pointer = "AimbotMain_Enabled",
     Callback = function(state)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/Auto-Reload/refs/heads/main/AutoReload"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/pastesense/refs/heads/main/pastesense"))()
     end})
 
 
@@ -2782,7 +2837,6 @@ Rage_Extra:Slider({
         print("Orbit Distance set to:", value)
     end
 })
-
 
 
 -- Services and Variables
@@ -3276,7 +3330,7 @@ end
 
 -- Toggle button for enabling/disabling Auto Armor
 Players_Main:Toggle({
-    Name = "Auto Armor",
+    Name = "Automatic Armor",
     Default = false,
     Pointer = "AutoArmor_Enabled",
     Callback = function(state)
@@ -3288,7 +3342,7 @@ Players_Main:Toggle({
 
 
 Players_Main:Slider({
-    Name = "Auto Armor Threshold",
+    Name = "Automatic Armor Threshold",
     Minimum = 1,
     Maximum = 100,
     Default = 30,
@@ -3364,31 +3418,39 @@ end)]]
 
 
 
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Services = {
+    RunService = game:GetService("RunService"),
+    ReplicatedStorage = game:GetService("ReplicatedStorage")
+}
+
+local stompConnection -- Connection for the Heartbeat event
 
 -- Auto Stomp Functions
 function stompLoopFunction()
-    ReplicatedStorage.MainEvent:FireServer("Stomp")
+    Services.ReplicatedStorage.MainEvent:FireServer("Stomp")
 end
 
 function toggleAutoStomp(state)
     if state then
         print("AutoStomp Enabled")
-        RunService.Heartbeat:Connect(stompLoopFunction)
+        stompConnection = Services.RunService.Heartbeat:Connect(stompLoopFunction)
     else
         print("AutoStomp Disabled")
-        RunService.Heartbeat:Disconnect(stompLoopFunction)
+        if stompConnection then
+            stompConnection:Disconnect()
+            stompConnection = nil
+        end
     end
 end
 
 -- Toggle for Auto Stomp
 Players_Main:Toggle({
-    Name = "Auto Stomp",
+    Name = "Automatic Stomp",
     Default = false,
     Pointer = "VisualsEnemies_AutoStomp",
-    Callback = toggleAutoStomp, -- Simplified the callback
+    Callback = toggleAutoStomp
 })
+
 
 
 local blockDelay = 0.2
