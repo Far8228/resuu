@@ -3,7 +3,7 @@
 -- USE ELECTRON
 
 
-
+loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/anticheat/refs/heads/main/bypass"))()
 
 
 -- // Folders
@@ -2321,6 +2321,7 @@ end
 
             local Rage_Main = Rage:Section({Name = Languages:GetTranslation("Main"), Side = "Left"})
             local Rage_Extra = Rage:Section({Name = Languages:GetTranslation("Extra"), Fill = true, Side = "Left"})
+            local Rage_Gui = Rage:Section({Name = Languages:GetTranslation("Gui"), Side = "Right"})
 
 
 
@@ -2396,10 +2397,10 @@ Rage_Extra:Toggle({
     Callback = function(toggleState)
         state.autoShootEnabled = toggleState
         if toggleState then
-            print("Automatic Fire Enabled")
+            
             startShooting()
         else
-            print("Automatic Fire Disabled")
+            
             stopShooting()
         end
     end
@@ -2455,16 +2456,14 @@ Rage_Extra:Toggle({
     Callback = function(toggleState)
         autoShootEnabled = toggleState
         if toggleState then
-            print("Automatic Fire Enabled")
+            
         else
-            print("Automatic Fire Disabled")
+            
         end
     end
 })
 
-
-
-    Rage_Extra:Button({
+    Rage_Gui:Button({
     Name = "pastesense",
     Default = false,
     Pointer = "AimbotMain_Enabled",
@@ -2472,20 +2471,32 @@ Rage_Extra:Toggle({
     loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/pastesense/refs/heads/main/pastesense"))()
     end})
 
+    Rage_Gui:Button({
+    Name = "Anti v2",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/flanchhh/AntiV2/refs/heads/main/Anti%20v2.lua"))();
+    end})
 
 
 
 
 
--- Global Variables
 isOrbiting, isEnabled, targetPlayer, orbitConnection, rapidFireActive, rapidFireCoroutine = false, false, nil, nil, false, nil
 orbitDistance, orbitSpeed, orbitHeight, rapidFireInterval = 25, 100, 1, 0.1
 character, camera, player, Players = game:GetService("Players").LocalPlayer.Character, game.Workspace.CurrentCamera, game:GetService("Players").LocalPlayer, game:GetService("Players")
 RunService = game:GetService("RunService")
 
+local healthTriggered = false -- To ensure messages are sent only once
+
 -- Utility Functions
 function getEquippedTool()
     return character:FindFirstChildOfClass("Tool")
+end
+
+function sendMessage(message)
+    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
 end
 
 function startRapidFire()
@@ -2493,7 +2504,6 @@ function startRapidFire()
 
     local tool = getEquippedTool()
     if not tool then
-        print("No tool equipped!")
         return
     end
 
@@ -2507,7 +2517,6 @@ function startRapidFire()
             elseif tool:FindFirstChild("Ammo") and tool.Ammo.Value > 0 then
                 tool:Activate()
             else
-                print("No valid shooting method or ammo!")
                 break
             end
             task.wait(rapidFireInterval)
@@ -2530,9 +2539,17 @@ function startOrbit(target)
         orbitConnection = RunService.RenderStepped:Connect(function(deltaTime)
             if isOrbiting and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local humanoidRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local targetPosition = humanoidRootPart.Position
+                local humanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+
+                -- Check target's health and send messages if health is below 5
+                if humanoid and humanoid.Health < 5 and not healthTriggered then
+                    sendMessage("Anti trashmode services")
+                    sendMessage("undetek!!!!1!!")
+                    healthTriggered = true -- Ensure messages are sent only once
+                end
 
                 -- Calculate orbit position
+                local targetPosition = humanoidRootPart.Position
                 local x = targetPosition.X + orbitDistance * math.cos(angle)
                 local z = targetPosition.Z + orbitDistance * math.sin(angle)
                 local y = targetPosition.Y + orbitHeight
@@ -2567,6 +2584,7 @@ function stopOrbit()
 
         camera.CameraSubject = character
         stopRapidFire()
+        healthTriggered = false -- Reset for the next target
     end
 end
 
@@ -2596,9 +2614,6 @@ function toggleFeature(state)
     isEnabled = state
     if not isEnabled then
         stopOrbit()
-        print("Feature disabled")
-    else
-        print("Feature enabled")
     end
 end
 
@@ -2611,14 +2626,11 @@ function onCharacterAdded(newCharacter)
         orbitConnection:Disconnect()
         orbitConnection = nil
     end
-
-    print("Character reset; reinitializing...")
 end
 
 function onPlayerDeath()
     stopOrbit()
     stopRapidFire()
-    print("Player died; resetting.")
 end
 
 -- Player Respawn and Death Monitoring
@@ -2637,7 +2649,7 @@ Rage_Main:Toggle({
         toggleFeature(state)
     end
 }):Keybind({
-    Default = Enum.KeyCode.Z,
+    Default = Enum.KeyCode.Q,
     KeybindName = "Unlock or Lock",
     Mode = "Toggle",
     Pointer = "OrbitRapid_Bind",
@@ -2645,21 +2657,16 @@ Rage_Main:Toggle({
         if isEnabled then
             if isOrbiting then
                 stopOrbit()
-                print("Target unlocked.")
             else
                 local closestPlayer = getClosestPlayerToMouse()
                 if closestPlayer then
                     startOrbit(closestPlayer)
-                    print("Locked onto target: " .. closestPlayer.Name)
-                else
-                    print("No valid target found near the mouse.")
                 end
             end
         end
     end
 })
 
--- Sliders for Dynamic Settings
 Rage_Main:Slider({
     Name = "Orbit Distance",
     Minimum = 1,
@@ -2669,7 +2676,6 @@ Rage_Main:Slider({
     Pointer = "OrbitDistance_Slider",
     Callback = function(value)
         orbitDistance = value
-        print("Orbit Distance set to:", value)
     end
 })
 
@@ -2682,7 +2688,6 @@ Rage_Main:Slider({
     Pointer = "OrbitHeight_Slider",
     Callback = function(value)
         orbitHeight = value
-        print("Orbit Height set to:", value)
     end
 })
 
@@ -2695,24 +2700,301 @@ Rage_Main:Slider({
     Pointer = "OrbitSpeed_Slider",
     Callback = function(value)
         orbitSpeed = value
-        print("Orbit Speed set to:", value)
     end
 })
 
 
 
-local size = 40
-local Players = cloneref(game:GetService("Players"))
-local RS = cloneref(game:GetService("RunService"))
-local UIS = cloneref(game:GetService("UserInputService")) -- For keybind detection
-local Client = Players.LocalPlayer
 
-local selectedPlayer = nil -- Variable to hold the currently selected player
-local hitboxEnabled = false -- Track if the hitbox is currently enabled
-local toggleEnabled = false -- Track if the toggle for hitbox is enabled
+isOrbiting, isEnabled, targetPlayer, teleportConnection, rapidFireActive, rapidFireCoroutine, cameraFocus = false, false, nil, nil, false, nil, nil
+teleportInterval, rapidFireInterval = 1, 0.1
+character, camera, player, Players = game:GetService("Players").LocalPlayer.Character, game.Workspace.CurrentCamera, game:GetService("Players").LocalPlayer, game:GetService("Players")
+RunService = game:GetService("RunService")
+
+local healthTriggered = {} -- Table to track health warning for each player
+DefaultChatEvents = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents
+
+-- Function to check if the tool is in the player's backpack or inventory
+function hasAUGTool()
+    for _, tool in ipairs(player.Backpack:GetChildren()) do
+        if tool.Name == "[AUG]" then
+            return true
+        end
+    end
+    for _, tool in ipairs(player.Character:GetChildren()) do
+        if tool.Name == "[AUG]" then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to buy the [AUG] tool if not in inventory
+function buyAUGTool()
+    local augShop = game:GetService("Workspace").Ignored.Shop["[AUG] - $2131"]  -- Update with your actual shop name
+    local clickDetector = augShop:FindFirstChild("ClickDetector")
+    
+    if clickDetector then
+        local originalPosition = character.HumanoidRootPart.CFrame -- Store the original position
+        character.HumanoidRootPart.CFrame = augShop.Head.CFrame  -- Teleport to the [AUG] shop
+
+        -- Simulate clicks to buy the tool
+        local endTime = tick() + 3  -- Try for 3 seconds
+        while tick() < endTime do
+            fireclickdetector(clickDetector) -- Simulate click
+            wait(0.1)
+        end
+
+        -- After the purchase, teleport back to the original position
+        character.HumanoidRootPart.CFrame = originalPosition
+        announce("Purchase", "[AUG] tool bought successfully.", 3)
+
+        -- Now equip the [AUG] tool after purchasing
+        equipAUGTool()
+    else
+        warn("[AUG] shop or click detector not found.")
+    end
+end
+
+-- Function to equip the [AUG] tool from the player's backpack
+function equipAUGTool()
+    -- Check if [AUG] tool is in the backpack
+    for _, tool in ipairs(player.Backpack:GetChildren()) do
+        if tool.Name == "[AUG]" then
+            -- Equip the tool
+            player.Character.Humanoid:EquipTool(tool)
+            announce("Tool Equipped", "[AUG] has been equipped!", 3)
+            return
+        end
+    end
+    -- If for some reason [AUG] was not found in the backpack
+    warn("[AUG] tool not found in backpack after purchase.")
+end
+
+-- Function to announce messages
+function announce(title, text, time)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = time,
+    })
+end
+
+-- Main Functions
+function startOrbitAroundTargetPlayer()
+    if isOrbiting then return end
+
+    -- Get the closest player to the mouse, but lock it in as the target for future orbit
+    local closestPlayer = getClosestPlayerToMouse()
+    if closestPlayer then
+        targetPlayer = closestPlayer
+    end
+
+    if not targetPlayer then return end -- Ensure there's a valid target player
+
+    isOrbiting = true
+    cameraFocus = camera.CameraSubject
+    camera.CameraSubject = targetPlayer.Character.HumanoidRootPart  -- Focus camera on target player
+
+    local angle = 0
+    teleportConnection = RunService.RenderStepped:Connect(function()
+        if isOrbiting and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+            local targetHeight = targetPosition.Y -- Fix height to target player's height
+
+            -- Random adjustments for orbit effect (only on X and Z, Y remains the same)
+            local randomDirection = Vector3.new(
+                math.random(-10, 10),  -- Random horizontal movement
+                0,                     -- Keep the Y height fixed
+                math.random(-10, 10)   -- Random depth movement
+            )
+
+            -- Calculate new teleport position around the closest player
+            local newPosition = Vector3.new(targetPosition.X + randomDirection.X, targetHeight, targetPosition.Z + randomDirection.Z)
+
+            -- Teleport the player to the new position
+            if character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = CFrame.new(newPosition)
+            end
+
+            -- Check if the target player is below 5 health and send the message only once
+            local humanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health < 5 and not healthTriggered[targetPlayer.UserId] then
+                -- Send first message
+                sendMessage("Anti trashmode services")
+
+                -- Set a delay (Cooldown) to prevent repeated messages too soon
+                healthTriggered[targetPlayer.UserId] = true
+
+                -- Wait for 0.1 seconds before sending the second message
+                task.wait(0.1)
+                -- Send second message
+                sendMessage("undetek!!!!1!!")
+
+                -- Set a cooldown (delay) to reset healthTriggered after a certain time
+                task.delay(5, function() 
+                    healthTriggered[targetPlayer.UserId] = nil
+                end)
+            end
+        end
+    end)
+
+    startRapidFireMode()
+end
+
+function stopOrbiting()
+    if isOrbiting then
+        isOrbiting = false
+
+        if teleportConnection then
+            teleportConnection:Disconnect()
+            teleportConnection = nil
+        end
+
+        -- Revert camera to original focus (your character)
+        if cameraFocus then
+            camera.CameraSubject = cameraFocus
+        end
+        
+        stopRapidFireMode()
+
+        -- Reset healthTriggered table for this player
+        if targetPlayer and targetPlayer.UserId then
+            healthTriggered[targetPlayer.UserId] = nil
+        end
+    end
+end
+
+-- Get closest player to the mouse
+function getClosestPlayerToMouse()
+    local mouse = player:GetMouse()
+    local closestPlayer, closestDistance = nil, math.huge
+
+    for _, otherPlayer in ipairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoidRootPart = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local screenPosition, onScreen = camera:WorldToViewportPoint(humanoidRootPart.Position)
+
+            if onScreen then
+                local distance = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(screenPosition.X, screenPosition.Y)).Magnitude
+                if distance < closestDistance then
+                    closestDistance = distance
+                    closestPlayer = otherPlayer
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Reset Everything on Respawn or Death
+function onCharacterAdded(newCharacter)
+    character = newCharacter
+    isOrbiting, rapidFireActive = false, false
+
+    if teleportConnection then
+        teleportConnection:Disconnect()
+        teleportConnection = nil
+    end
+end
+
+function onPlayerDeath()
+    stopOrbiting()
+    stopRapidFireMode()
+end
+
+-- Player Respawn and Death Monitoring
+player.CharacterAdded:Connect(onCharacterAdded)
+
+if character:FindFirstChild("Humanoid") then
+    character.Humanoid.Died:Connect(onPlayerDeath)
+end
+
+-- User Interface Callbacks
+Rage_Main:Toggle({
+    Name = "Random Teleport",
+    Default = false,
+    Pointer = "Orbit_Toggle",
+    Callback = function(state)
+        isEnabled = state
+        if not isEnabled then
+            stopOrbiting()
+        else
+            -- Check if you have the [AUG] tool before enabling the teleportation
+            if not hasAUGTool() then
+                announce("Tool Check", "[AUG] tool missing. Teleporting to buy it.", 3)
+                -- Cancel random teleport and buy [AUG] tool
+                stopOrbiting()
+                buyAUGTool()  -- Teleport to buy the [AUG] tool
+                task.wait(0.8)  -- Wait for a second before enabling random teleport
+                -- After buying, restart random teleport
+                startOrbitAroundTargetPlayer()
+            else
+                -- If [AUG] is owned, start random teleport
+                startOrbitAroundTargetPlayer()
+            end
+        end
+    end
+}):Keybind({
+    Default = Enum.KeyCode.Q,
+    KeybindName = "Toggle Orbiting",
+    Mode = "Toggle",
+    Pointer = "Orbit_Bind",
+    Callback = function()
+        if isEnabled then
+            if isOrbiting then
+                stopOrbiting()
+            else
+                startOrbitAroundTargetPlayer()
+            end
+        end
+    end
+})
+
+Rage_Main:Toggle({
+    Name = "Toggle Camera Focus on Player",
+    Default = true,  -- Start with camera focused on player
+    Pointer = "Camera_Focus_Toggle",
+    Callback = function(state)
+        if state then
+            -- Camera focus on targetPlayer if orbiting
+            if isOrbiting and targetPlayer then
+                camera.CameraSubject = targetPlayer.Character.HumanoidRootPart
+            end
+        else
+            -- Revert back to default camera subject (your character)
+            if character:FindFirstChild("HumanoidRootPart") then
+                camera.CameraSubject = character.HumanoidRootPart
+            end
+        end
+    end
+})
+
+
+
+
+
+
+
+
+
+size = 40
+Players = cloneref(game:GetService("Players"))
+RS = cloneref(game:GetService("RunService"))
+UIS = cloneref(game:GetService("UserInputService"))
+Client = Players.LocalPlayer
+
+selectedPlayer = nil
+hitboxEnabled = false
+pointerLineEnabled = false
+pointerDotEnabled = false
+pointerLine = nil
+pointerDot = nil
+cursorOffset = 60 -- Offset to lower the pointer line's start position from the cursor
 
 -- Function to find the closest player to the mouse in screen space (infinite range)
-local function getClosestPlayerToMouse()
+function getClosestPlayerToMouse()
     local mouse = Client:GetMouse()
     local closestPlayer = nil
     local closestDistance = math.huge -- Use a very large value for initial comparison (effectively "infinite" range)
@@ -2734,8 +3016,60 @@ local function getClosestPlayerToMouse()
     return closestPlayer
 end
 
+-- Function to create a pointer line
+function createPointerLine()
+    local line = Drawing.new("Line")
+    line.Color = Color3.new(1, 1, 1) -- White color
+    line.Thickness = 2
+    line.Transparency = 1
+    return line
+end
+
+-- Function to create a dot
+function createPointerDot()
+    local dot = Drawing.new("Circle")
+    dot.Color = Color3.new(1, 1, 1) -- Red color
+    dot.Thickness = 1
+    dot.Radius = 5
+    dot.Filled = true
+    dot.Transparency = 1
+    return dot
+end
+
+-- Function to update pointer line
+function updatePointerLine()
+    if pointerLine and pointerLineEnabled and selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local mouse = Client:GetMouse()
+        local HRP = selectedPlayer.Character.HumanoidRootPart
+        local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(HRP.Position)
+
+        pointerLine.From = Vector2.new(mouse.X, mouse.Y + cursorOffset) -- Offset to lower the pointer line from the cursor
+        pointerLine.To = Vector2.new(screenPoint.X, screenPoint.Y) -- End at hitbox screen position
+        pointerLine.Visible = true
+    else
+        if pointerLine then
+            pointerLine.Visible = false
+        end
+    end
+end
+
+-- Function to update pointer dot
+function updatePointerDot()
+    if pointerDot and pointerDotEnabled and selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local HRP = selectedPlayer.Character.HumanoidRootPart
+        local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(HRP.Position)
+
+        pointerDot.Position = Vector2.new(screenPoint.X, screenPoint.Y) -- Place the dot at the torso's position
+        pointerDot.Visible = true
+    else
+        if pointerDot then
+            pointerDot.Visible = false
+        end
+    end
+end
+
 -- Function to enable/disable hitbox
-local function toggleHitbox(player)
+function toggleHitbox(player)
     if player then
         local HRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if HRP then
@@ -2746,7 +3080,6 @@ local function toggleHitbox(player)
                 HRP.Transparency = 1 -- Make it invisible
                 hitboxEnabled = false
                 selectedPlayer = nil
-                print("Hitbox disabled for:", player.Name)
             elseif not hitboxEnabled then
                 -- Enable hitbox
                 HRP.Size = Vector3.new(size, size, size)
@@ -2754,89 +3087,144 @@ local function toggleHitbox(player)
                 HRP.Transparency = 0.8
                 hitboxEnabled = true
                 selectedPlayer = player
-                print("Hitbox enabled for:", player.Name)
             end
         end
     end
 end
 
--- Toggle System (UI Toggle)
--- Toggle for HitBox Expander
+-- Toggle System for HitBox Expander
 Rage_Extra:Toggle({
     Name = "HitBox Expander",
-    Default = false,  -- Default state (disabled)
-    Pointer = "Hitbox_Toggle",  -- Unique identifier for this toggle
+    Default = false,
+    Pointer = "Hitbox_Toggle",
     Callback = function(state)
-        toggleEnabled = state  -- Update the global toggle state
-
         if state then
-            -- If toggle is enabled, find the closest player and enable hitbox
             local closestPlayer = getClosestPlayerToMouse()
             if closestPlayer then
-                selectedPlayer = closestPlayer  -- Track the selected player
-                hitboxEnabled = true  -- Mark hitbox as active
-                toggleHitbox(closestPlayer)  -- Enable the hitbox for this player
-                print("Hitbox enabled for:", closestPlayer.Name)
+                selectedPlayer = closestPlayer
+                hitboxEnabled = true
+                toggleHitbox(closestPlayer)
             else
-                print("No player found near the mouse!")
+                
             end
         else
-            -- If toggle is disabled, disable the hitbox
             if selectedPlayer then
-                toggleHitbox(selectedPlayer)  -- Disable hitbox for the previously selected player
-                print("Hitbox disabled for:", selectedPlayer.Name)
-                selectedPlayer = nil  -- Clear the selected player
+                toggleHitbox(selectedPlayer)
+                selectedPlayer = nil
             end
-            hitboxEnabled = false  -- Mark hitbox as inactive
+            hitboxEnabled = false
         end
     end
 }):Keybind({
-    Default = Enum.KeyCode.Q,  -- Default keybind
-    KeybindName = "Hitbox Keybind",  -- Display name for the keybind
-    Mode = "Toggle",  -- Toggle mode
-    Pointer = "Hitbox_Bind",  -- Unique identifier for this keybind
+    Default = Enum.KeyCode.Z,
+    KeybindName = "Hitbox Keybind",
+    Mode = "Toggle",
+    Pointer = "Hitbox_Bind",
     Callback = function()
-        -- Ensure the keybind works only when the toggle is enabled
-        if toggleEnabled then
-            if hitboxEnabled then
-                -- Disable hitbox if it was active
-                if selectedPlayer then
-                    toggleHitbox(selectedPlayer)  -- Disable hitbox for the selected player
-                    print("Hitbox disabled for:", selectedPlayer.Name)
-                    selectedPlayer = nil  -- Clear the selected player
-                end
-                hitboxEnabled = false  -- Mark hitbox as inactive
-            else
-                -- Enable hitbox on the closest player to the mouse
-                local closestPlayer = getClosestPlayerToMouse()
-                if closestPlayer then
-                    selectedPlayer = closestPlayer  -- Track the selected player
-                    toggleHitbox(closestPlayer)  -- Enable the hitbox for this player
-                    print("Hitbox enabled for:", closestPlayer.Name)
-                    hitboxEnabled = true  -- Mark hitbox as active
-                else
-                    print("No player found near the mouse!")
-                end
+        if hitboxEnabled then
+            if selectedPlayer then
+                toggleHitbox(selectedPlayer)
+                selectedPlayer = nil
             end
+            hitboxEnabled = false
         else
-            print("Keybind inactive because the toggle is off.")
+            local closestPlayer = getClosestPlayerToMouse()
+            if closestPlayer then
+                selectedPlayer = closestPlayer
+                toggleHitbox(closestPlayer)
+                hitboxEnabled = true
+            else
+            end
         end
     end
 })
-
 
 Rage_Extra:Slider({
     Name = "HitBox Expander Size (42 Is Recommended)",
     Minimum = 1,
     Maximum = 100,
-    Default = orbitDistance,
+    Default = size,
     Decimals = 1,
-    Pointer = "OrbitDistance_Slider",
+    Pointer = "Hitbox_Size_Slider",
     Callback = function(value)
-        size = value -- Update the orbit distance dynamically
-        print("Orbit Distance set to:", value)
+        size = value
     end
 })
+
+
+
+-- Toggle System for Pointer Line
+Rage_Extra:Toggle({
+    Name = "Pointer Line",
+    Default = false,
+    Pointer = "Pointer_Line_Toggle",
+    Callback = function(state)
+        pointerLineEnabled = state
+        if state then
+            if not pointerLine then
+                pointerLine = createPointerLine()
+            end
+            
+        else
+            if pointerLine then
+                pointerLine:Remove()
+                pointerLine = nil
+            end
+            
+        end
+    end
+})
+
+
+
+Rage_Extra:Slider({
+    Name = "Cursor Offset",
+    Minimum = 1,
+    Maximum = 100,
+    Default = size,
+    Decimals = 1,
+    Pointer = "Hitbox_Size_Slider",
+    Callback = function(value)
+        cursorOffset = value
+    end
+})
+
+
+-- Toggle System for Pointer Dot
+Rage_Extra:Toggle({
+    Name = "Dot",
+    Default = false,
+    Pointer = "Pointer_Dot_Toggle",
+    Callback = function(state)
+        pointerDotEnabled = state
+        if state then
+            if not pointerDot then
+                pointerDot = createPointerDot()
+            end
+            
+        else
+            if pointerDot then
+                pointerDot:Remove()
+                pointerDot = nil
+            end
+            
+        end
+    end
+})
+
+-- Update pointer line and dot on every render frame
+RS.RenderStepped:Connect(function()
+    if pointerLineEnabled then
+        updatePointerLine()
+    end
+    if pointerDotEnabled then
+        updatePointerDot()
+    end
+end)
+
+
+
+
 
 
 -- Services and Variables
@@ -2958,9 +3346,9 @@ function toggleAimbot(state)
         -- Disable aimbot
         aimbotActive = false
         resetCamera() -- Reset camera to player
-        print("Aimbot Disabled")
+        
     else
-        print("Aimbot Enabled")
+        
     end
 end
 
@@ -2981,12 +3369,12 @@ Rage_Main:Toggle({
         if aimbotEnabled then
             aimbotActive = not aimbotActive -- Switch the active state
             if aimbotActive then
-                print("Aimbot Activated")
+                
                 -- Start the aimbot loop
                 aimbotCoroutine = coroutine.create(aimbotLoop)
                 coroutine.resume(aimbotCoroutine)
             else
-                print("Aimbot Deactivated")
+                
                 -- Stop the coroutine and reset camera
                 if aimbotCoroutine then
                     aimbotCoroutine = nil
@@ -3005,7 +3393,7 @@ Rage_Main:Slider({
     Pointer = "Aimbot_Range_Slider",
     Callback = function(value)
         aimbotRange = value
-        print("Aimbot range set to: " .. aimbotRange .. " studs")
+        
     end
 })
 
@@ -3021,7 +3409,7 @@ local Services = {
 -- Global function to reset the character
 function resetCharacter()
     if Services.Player and Services.Character then
-        print("Resetting character...")
+        
         Services.Player:LoadCharacter() -- Respawn the character
     end
 end
@@ -3031,7 +3419,6 @@ function monitorCharacter(Humanoid, autoResetEnabled)
     -- Monitor health changes
     Humanoid.HealthChanged:Connect(function(health)
         if autoResetEnabled and health < 5 then -- Trigger reset if health is below 5
-            print("Health low, forcing reset...")
             Humanoid.Health = 0 -- Force reset
         end
     end)
@@ -3039,7 +3426,6 @@ function monitorCharacter(Humanoid, autoResetEnabled)
     -- Monitor state changes
     Humanoid.StateChanged:Connect(function(_, newState)
         if autoResetEnabled and newState == Enum.HumanoidStateType.FallingDown then
-            print("Character knocked down, resetting...")
             resetCharacter()
         end
     end)
@@ -3048,7 +3434,6 @@ function monitorCharacter(Humanoid, autoResetEnabled)
     while Services.Character and Humanoid and Humanoid.Parent and autoResetEnabled do
         task.wait(0.1)
         if Humanoid.Health < 5 then -- Check health in the loop as well
-            print("Health critical, forcing reset...")
             Humanoid.Health = 0 -- Force reset
         end
     end
@@ -3057,7 +3442,6 @@ end
 -- Global function to handle character respawn
 function handleCharacterRespawn(autoResetEnabled)
     Services.Player.CharacterAdded:Connect(function(newCharacter)
-        print("Character respawned.")
         Services.Character = newCharacter -- Update the character reference
         if autoResetEnabled then
             local Humanoid = Services.Character:WaitForChild("Humanoid") -- Wait for Humanoid to exist
@@ -3069,11 +3453,11 @@ end
 -- Global function to start monitoring the current character
 function startMonitoring(autoResetEnabled)
     if Services.Character then
-        print("Monitoring current character...")
+        
         local Humanoid = Services.Character:WaitForChild("Humanoid") -- Wait for Humanoid to exist
         monitorCharacter(Humanoid, autoResetEnabled)
     else
-        print("Waiting for character...")
+        
         Services.Character = Services.Player.CharacterAdded:Wait() -- Wait for the character to spawn
         local Humanoid = Services.Character:WaitForChild("Humanoid")
         monitorCharacter(Humanoid, autoResetEnabled)
@@ -3088,9 +3472,7 @@ Rage_Extra:Toggle({
     Callback = function(state)
         local autoResetEnabled = state -- Update toggle state
         if state then
-            print("Anti Stomp Enabled")
         else
-            print("Anti Stomp Disabled")
         end
 
         -- Handle character respawn and initial setup
@@ -3255,6 +3637,21 @@ initializeChatSpy()
 
 
 
+    Players_Extra:Button({
+    Name = "No Slow",
+    Default = false,
+    Pointer = "AimbotMain_Enabled",
+    Callback = function(state)
+    local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+
+local bodyEffects = character:FindFirstChild("BodyEffects")
+if bodyEffects and bodyEffects:FindFirstChild("Movement") then
+    bodyEffects.Movement:Destroy()
+end
+
+    end})
+
+
 
 
 
@@ -3317,13 +3714,11 @@ local function toggleAutoArmor(state)
     buyingActive = state
 
     if buyingActive then
-        print("Auto Armor Enabled")
         announce("Auto Armor Activated", "Armor will be auto-purchased", 5)
 
         -- Start the auto armor loop in a coroutine
         coroutine.wrap(buyArmor)()
     else
-        print("Auto Armor Disabled")
         announce("Auto Armor Deactivated", "Armor auto-purchase stopped", 5)
     end
 end
@@ -3392,10 +3787,10 @@ end
 local function toggleAutoReport(state)
     isActive = state
     if isActive then
-        print("Auto-reporting Enabled")
+        
         startAutoReport() -- Start the loop if enabled
     else
-        print("Auto-reporting Disabled")
+        
     end
 end
 
@@ -3412,7 +3807,7 @@ Players_Main:Toggle({
 -- Stop auto-reporting if the player respawns
 game.Players.LocalPlayer.CharacterAdded:Connect(function()
     isActive = false -- Reset state on character respawn
-    print("Auto-reporting Disabled due to respawn")
+    
 end)]]
 
 
@@ -3432,10 +3827,8 @@ end
 
 function toggleAutoStomp(state)
     if state then
-        print("AutoStomp Enabled")
         stompConnection = Services.RunService.Heartbeat:Connect(stompLoopFunction)
     else
-        print("AutoStomp Disabled")
         if stompConnection then
             stompConnection:Disconnect()
             stompConnection = nil
@@ -3450,6 +3843,7 @@ Players_Main:Toggle({
     Pointer = "VisualsEnemies_AutoStomp",
     Callback = toggleAutoStomp
 })
+
 
 
 
@@ -3468,11 +3862,9 @@ end
 
 function toggleSpam(state)
     if state then
-        print("Spamming Block Enabled")
         spamEnabled = true
         coroutine.wrap(spamBlock)() -- Start the spam coroutine
     else
-        print("Spamming Block Disabled")
         spamEnabled = false
     end
 end
@@ -3569,10 +3961,8 @@ end
 function toggleEmote(state)
     emoteEnabled = state
     if emoteEnabled then
-        print("Emote Loop Enabled")
         playEmote()
     else
-        print("Emote Loop Disabled")
         stopEmote()
     end
 end
@@ -3637,7 +4027,6 @@ end
 -- Function to toggle the teleport feature
 function toggleVoidTeleport(state)
     teleportEnabled = state
-    print("Teleport to void", teleportEnabled and "enabled." or "disabled.")
 end
 
 -- Reset feature on character respawn
@@ -3670,7 +4059,6 @@ Players_Main:Slider({
     Pointer = "HealthThreshold_Slider",
     Callback = function(value)
         healthThreshold = value
-        print("Health Threshold set to:", value)
     end
 })
 
@@ -3690,9 +4078,9 @@ local isEnabled = false  -- Global flag to track whether SpinBot is enabled
 function toggleSpinBot(state)
     isEnabled = state
     if isEnabled then
-        print("Walking feature enabled.")
+        
     else
-        print("Walking feature disabled.")
+        
     end
 end
 
@@ -3765,6 +4153,154 @@ end
         do -- Visuals
         local Visuals_Main = Visuals2:Section({Name = Languages:GetTranslation("Main"), Fill = true, Side = "Left"})
 
+
+
+
+
+local isEffectEnabled, connection, spinningParts = false, nil, {}
+local Aura1Distance, Aura1Speed, numberOfParts = 10, 50, 10 -- Local variables grouped
+
+-- Cleanup the spinning parts and disconnect the event
+local function cleanUpParts()
+    for _, part in pairs(spinningParts) do
+        part:Destroy()
+    end
+    spinningParts = {}
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+end
+
+-- Create the spinning parts
+local function createSpinningParts()
+    -- Only create parts if the effect is enabled
+    for i = 1, math.floor(numberOfParts) do
+        local part = Instance.new("Part", workspace)
+        part.Anchored = true
+        part.CanCollide = false
+        part.Material = Enum.Material.Neon
+        part.Color = Color3.fromRGB(255, 100, 255)
+        part.Transparency = 0.5
+        part.Size = Vector3.new(0.5, 0.5, 0.5)
+
+        -- Particle emitter
+        local emitter = Instance.new("ParticleEmitter", part)
+        emitter.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.new(1, 0, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.new(0, 0, 1)),
+            ColorSequenceKeypoint.new(1, Color3.new(0, 1, 0))
+        }
+        emitter.LightEmission = 1
+        emitter.Size = NumberSequence.new{NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)}
+        emitter.Rate = 50
+        emitter.Speed = NumberRange.new(2, 4)
+        emitter.Lifetime = NumberRange.new(1, 2)
+
+        -- Glow effect
+        local glow = Instance.new("PointLight", part)
+        glow.Color = Color3.fromRGB(255, 100, 255)
+        glow.Range = 10
+        glow.Brightness = 2
+
+        table.insert(spinningParts, part)
+    end
+end
+
+-- Function to handle spinning logic
+local function startSpinning()
+    local angle, height, direction = 0, 0, 1
+    connection = game:GetService("RunService").RenderStepped:Connect(function(deltaTime)
+        if not isEffectEnabled then
+            -- Stop everything if the effect is not enabled
+            return
+        end
+
+        local rootPart = game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            height = height + direction * deltaTime * 2
+            if height > 3 then direction = -1 elseif height < -3 then direction = 1 end
+
+            -- Orbit each part around the player
+            for i, part in pairs(spinningParts) do
+                local partAngle = angle + (i * math.pi * 2 / #spinningParts)  -- Offset each part's orbit position
+                part.Position = rootPart.Position + Vector3.new(math.cos(partAngle) * Aura1Distance, height, math.sin(partAngle) * Aura1Distance)
+            end
+
+            angle = angle + deltaTime * Aura1Speed  -- Control the speed of the orbit
+        end
+    end)
+end
+
+-- Toggle to start/stop the spinning effect
+function toggleSpinningEffect(state)
+    isEffectEnabled = state
+    cleanUpParts()  -- Clean up old parts and connection
+
+    if isEffectEnabled then
+        createSpinningParts()  -- Create new parts
+        startSpinning()  -- Start spinning the parts
+    end
+end
+
+-- Toggle to start/stop the spinning effect
+Visuals_Main:Toggle({
+    Name = "Aura",
+    Default = false,
+    Pointer = "SpinningEffect_Toggle",
+    Callback = toggleSpinningEffect
+})
+
+-- Orbit Distance Slider
+Visuals_Main:Slider({
+    Name = "Aura Distance",
+    Minimum = 1,
+    Maximum = 100,
+    Default = Aura1Distance,
+    Decimals = 1,
+    Pointer = "OrbitDistance_Slider",
+    Callback = function(value)
+        Aura1Distance = value
+        if isEffectEnabled then
+            toggleSpinningEffect(true) -- Restart effect to apply the new distance
+        end
+    end
+})
+
+-- Number of Parts Slider
+Visuals_Main:Slider({
+    Name = "Aura Number Of Parts",
+    Minimum = 1,
+    Maximum = 500,
+    Default = numberOfParts,
+    Decimals = 1,
+    Pointer = "NumberOfParts_Slider",
+    Callback = function(value)
+        numberOfParts = value
+        if isEffectEnabled then
+            toggleSpinningEffect(true) -- Restart effect to apply the new number of parts
+        end
+    end
+})
+
+-- Aura Speed Slider
+Visuals_Main:Slider({
+    Name = "Aura Speed",
+    Minimum = 1,
+    Maximum = 500,
+    Default = Aura1Speed,
+    Decimals = 1,
+    Pointer = "OrbitSpeed_Slider",
+    Callback = function(value)
+        Aura1Speed = value
+    end
+})
+
+
+
+
+
+
     Visuals_Main:Button({
     Name = "esp",
     Default = false,
@@ -3773,6 +4309,9 @@ end
     loadstring(game:HttpGet("https://raw.githubusercontent.com/bebepro/esp/refs/heads/main/esp"))()
     end})
 end
+
+
+
         do -- Misc
             local Misc_Client, Misc_Custom = Misc:MultiSection({Sections = {Languages:GetTranslation("Main"), Languages:GetTranslation("Custom")}, Size = 347})
             local Misc_Movement = Misc:Section({Name = Languages:GetTranslation("Movement"), Side = "Right"})
@@ -3861,15 +4400,13 @@ Misc_Movement:Toggle({
     Callback = function(state)
         setSpeedBoostState(state) -- Enable or disable speed boost based on toggle state
         if state then
-            print("Speed boost toggle enabled")
         else
-            print("Speed boost toggle disabled")
             setSpeedBoostKeybindState(false) -- Ensure keybind is deactivated when toggle is off
         end
     end
 }):Keybind({
     Flag = "SpeedBoost_Cframe", -- Unique identifier for the keybind
-    Default = Enum.KeyCode.E, -- Default keybind
+    Default = Enum.KeyCode.C, -- Default keybind
     KeybindName = Languages:GetTranslation("Speed Boost Key"), -- Display name for the keybind
     Mode = "Toggle", -- Keybind mode (Toggle behavior)
     Callback = function()
@@ -3878,13 +4415,13 @@ Misc_Movement:Toggle({
             local keybindState = not getSpeedBoostKeybindState()
             setSpeedBoostKeybindState(keybindState)
             if keybindState then
-                print("Speed boost activated")
+                
                 coroutine.wrap(moveWithCFrame)(getSpeedMultiplier()) -- Start movement coroutine with multiplier from slider
             else
-                print("Speed boost deactivated")
+                
             end
         else
-            print("Speed boost is disabled; enable the toggle first!")
+            
         end
     end
 })
@@ -3899,7 +4436,6 @@ Misc_Movement:Slider({
     Decimals = 0.1, -- Decimal precision
     Callback = function(value)
         setSpeedMultiplier(value) -- Update the global speed multiplier based on slider value
-        print("Speed multiplier set to: " .. value) -- Optionally print the value for feedback
     end
 })
 
@@ -3941,10 +4477,10 @@ Misc_Custom:Toggle({
     Pointer = "RandomTeleport_Toggle",
     Callback = function(toggleState)
         if toggleState then
-            print("Random Teleport Enabled")
+            
             startTeleporting()
         else
-            print("Random Teleport Disabled")
+            
             stopTeleporting()
         end
     end
@@ -3990,7 +4526,6 @@ function StartFlying()
     humanoid.UseJumpPower = false
     humanoid:ChangeState(Enum.HumanoidStateType.Physics)
     services.Workspace.Gravity = 0
-    print("Flying enabled")
 end
 
 function StopFlying()
@@ -3999,7 +4534,7 @@ function StopFlying()
     humanoid.UseJumpPower = true
     humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
     services.Workspace.Gravity = defaultGravity
-    print("Flying disabled")
+    
 end
 
 function ToggleFly(state)
@@ -4054,7 +4589,6 @@ end
 
 function SetFlightSpeed(value)
     flightSpeed = value
-    print("Fly speed set to: " .. value)
 end
 
 function SetupFlying()
@@ -4126,10 +4660,9 @@ Misc_Movement:Slider({
             Misc_Extra:Toggle({Name = Languages:GetTranslation("Lag Switch"), Flag = "MiscExtra_LagSwitch"}):Keybind({Flag = "MiscExtra_LagSwitchKey", Default = Enum.KeyCode.Equals, KeybindName = Languages:GetTranslation("Lag Switch"), Mode = "On Hold"})
             Misc_Extra:Slider({Flag = "MiscExtra_LagSwitchAmmount", Ending = "rl", Default = 1, Maximum = 10, Minimum = 0.1, Decimals = 0.01})
             --
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local DefaultChatEvents = ReplicatedStorage.DefaultChatSystemChatEvents
+DefaultChatEvents = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents
 
-local Messages = {
+Messages = {
     "loser vibes? not with resuu.lol",
     "silence is the best answer for a fool",
     "can't beat resuu.lol? thats common",
@@ -4141,85 +4674,61 @@ local Messages = {
     "silence my dog"
 }
 
-local isActive = false  -- Start with the toggle disabled
-local spamDelay = 1 -- Default delay for spamming messages (in seconds)
-local reportCoroutine = nil -- Variable to hold the coroutine for auto-reporting
+isActive, spamDelay, reportCoroutine = false, 1, nil
 
--- Function to send a message
 function sendMessage(message)
     DefaultChatEvents.SayMessageRequest:FireServer(message, "All")
 end
 
--- Function to start auto-reporting
-function startAutoReport()
-    reportCoroutine = coroutine.create(function()
-        while isActive do
-            for _, message in ipairs(Messages) do
-                if not isActive then break end -- Check if still active
-                sendMessage(message) -- Send each message
-                wait(spamDelay) -- Wait for the delay before sending the next message
-            end
-        end
-    end)
-
-    coroutine.resume(reportCoroutine) -- Start the coroutine
-end
-
--- Function to stop auto-reporting
-function stopAutoReport()
-    if reportCoroutine then
-        reportCoroutine = nil -- Reset the coroutine when disabling
-    end
-end
-
--- Function to handle the toggle logic
 function toggleAutoReport(state)
     isActive = state
-
-    if isActive then
-        print("Auto-reporting Enabled")
-        startAutoReport() -- Start auto-reporting if active
+    if state then
+        reportCoroutine = coroutine.create(function()
+            while isActive do
+                for _, message in ipairs(Messages) do
+                    if not isActive then break end
+                    sendMessage(message)
+                    wait(spamDelay)
+                end
+            end
+        end)
+        coroutine.resume(reportCoroutine)
     else
-        print("Auto-reporting Disabled")
-        stopAutoReport() -- Stop auto-reporting if inactive
+        reportCoroutine = nil
     end
 end
 
--- Function to update the spam delay
-function updateSpamDelay(value)
-    spamDelay = value
-    print("Spam delay set to:", value)
-end
-
--- Toggle for starting and stopping the auto-reporting (as in your previous example)
 Misc_Chat:Toggle({
     Name = "Chat Spam",
     Default = false,
-    Pointer = "AimbotMain_Enabled",
+    Pointer = "ChatSpam_Toggle",
     Callback = function(state)
-        toggleAutoReport(state) -- Toggle the state based on the toggle button state
+        toggleAutoReport(state)
     end
-})
-
--- Slider for setting the delay between messages
+}):Keybind({
+    Default = Enum.KeyCode.J,
+    KeybindName = "Toggle Spam",
+    Mode = "Toggle",
+    Pointer = "ChatSpam_Keybind",
+    Callback = function()
+        toggleAutoReport(not isActive)
+    end})
 Misc_Chat:Slider({
     Name = "Spam Delay (Seconds)",
-    Minimum = 0.1,  -- Minimum delay (0.1 second)
-    Maximum = 5,    -- Maximum delay (5 seconds)
-    Default = 1,    -- Default delay is 1 second
-    Decimals = 0.1,   -- Show 2 decimal places for the delay
-    Pointer = "ChatSpam_Delay_Slider",
+    Minimum = 0.1,
+    Maximum = 5,
+    Default = 1,
+    Decimals = 0.1,
+    Pointer = "ChatSpam_Delay",
     Callback = function(value)
-        updateSpamDelay(value) -- Update the delay with the slider value
+        spamDelay = value
     end
 })
 
--- Handle character reset to disable the auto-report when the player respawns
 game.Players.LocalPlayer.CharacterAdded:Connect(function()
-    stopAutoReport() -- Stop auto-reporting on character reset
-    isActive = false -- Ensure the state is disabled on reset
+    isActive = false
+    reportCoroutine = nil
 end)
-        
             Misc_Chat:Dropdown({Name = Languages:GetTranslation("Chat Spam Type"), Flag = "MiscChat_Type", Default = "Atlanta", Options = {"Atlanta", "Troll", "Toxic", "Fulcrum", "Custom", "Song"}})
             Misc_Chat:TextBox({Flag = "MiscChat_Song", Max = 50, PlaceHolder = Languages:GetTranslation("Song Name"), Callback = function(Text, Enter) if Enter then Chat:GenerateSong(Text) end end})
             Misc_Chat:Toggle({Name = Languages:GetTranslation("Multiple"), Flag = "MiscChat_Multiple", Default = true})
